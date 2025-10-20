@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azure Admin Consent - COCD</title>
+    <meta name="robots" content="noindex, nofollow">
     <style>
         * {
             margin: 0;
@@ -63,9 +64,14 @@
             color: #dc3545;
         }
 
-        .icon.loading {
+        .icon.info {
             background: #d1ecf1;
             color: #0c5460;
+        }
+
+        .icon.warning {
+            background: #fff3cd;
+            color: #856404;
         }
 
         h1 {
@@ -168,6 +174,38 @@
             font-size: 14px;
         }
 
+        .warning-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+
+        .warning-banner strong {
+            color: #856404;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .warning-banner p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .disclaimer {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 24px;
@@ -190,7 +228,7 @@
 <body>
     <div class="container">
         <div id="content">
-            <div class="icon loading">
+            <div class="icon info">
                 <span>⏳</span>
             </div>
             <h1>Traitement en cours...</h1>
@@ -199,7 +237,22 @@
     </div>
 
     <script>
-        // Fonction pour extraire les paramètres de l'URL
+        // ============================================================================
+        // CONFIGURATION - Modifier ces valeurs pour votre déploiement
+        // ============================================================================
+        const CONFIG = {
+            // ⚠️ Remplacez par votre username GitHub
+            AUTHORIZED_DOMAIN: 'USERNAME.github.io',
+            
+            // ⚠️ Remplacez par le nom de votre repo
+            AUTHORIZED_PATH: '/COCD-REDIRECT'
+        };
+
+        // ============================================================================
+        // Fonctions
+        // ============================================================================
+        
+        // Extraire les paramètres de l'URL
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
             return {
@@ -211,19 +264,76 @@
             };
         }
 
-        // Fonction pour afficher le résultat
+        // Vérifier si c'est le site officiel
+        function isOfficialSite() {
+            const currentHost = window.location.hostname;
+            const currentPath = window.location.pathname;
+            
+            // Localhost = OK pour les tests
+            if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                return true;
+            }
+            
+            // Vérifier le domaine et le chemin
+            return currentHost.includes(CONFIG.AUTHORIZED_DOMAIN) && 
+                   currentPath.startsWith(CONFIG.AUTHORIZED_PATH);
+        }
+
+        // Afficher l'avertissement si c'est un site copié
+        function showUnauthorizedWarning() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="icon warning">
+                    <span>⚠️</span>
+                </div>
+                <h1>Site Non Officiel</h1>
+                <div class="warning-banner">
+                    <strong>ATTENTION</strong>
+                    <p>Vous n'êtes pas sur le site officiel. Cette page a été copiée sans autorisation.</p>
+                </div>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="detail-label">Domaine actuel :</span>
+                        <span class="detail-value">${window.location.hostname}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Site officiel :</span>
+                        <span class="detail-value">${CONFIG.AUTHORIZED_DOMAIN}</span>
+                    </div>
+                </div>
+                <p class="message">
+                    Ce site appartient à une entité gouvernementale de cybersécurité.
+                    Toute copie non autorisée est interdite.
+                </p>
+            `;
+        }
+
+        // Afficher les résultats
         function displayResult() {
+            // Vérifier si c'est le site officiel
+            if (!isOfficialSite()) {
+                showUnauthorizedWarning();
+                return;
+            }
+            
             const params = getUrlParams();
             const content = document.getElementById('content');
             
-            // Vérifier s'il y a une erreur
+            // Disclaimer commun
+            const disclaimer = `
+                <div class="disclaimer">
+                    Site officiel - Entité gouvernementale de cybersécurité
+                </div>
+            `;
+            
+            // Erreur
             if (params.error) {
                 content.innerHTML = `
                     <div class="icon error">
                         <span>✗</span>
                     </div>
                     <h1>Consentement refusé ou échoué</h1>
-                    <p class="message">Le consentement administrateur n'a pas pu être accordé. Veuillez réessayer ou contacter votre administrateur.</p>
+                    <p class="message">Le consentement administrateur n'a pas pu être accordé.</p>
                     <div class="details">
                         <div class="detail-row">
                             <span class="detail-label">Erreur :</span>
@@ -246,19 +356,20 @@
                         <a href="https://portal.azure.com" class="btn btn-primary">Retour au portail Azure</a>
                         <button onclick="window.close()" class="btn btn-secondary">Fermer</button>
                     </div>
+                    ${disclaimer}
                     <div class="footer">
                         COCD - Azure App Registration
                     </div>
                 `;
-            } 
-            // Vérifier si le consentement a été accordé
+            }
+            // Succès
             else if (params.adminConsent === 'True') {
                 content.innerHTML = `
                     <div class="icon success">
                         <span>✓</span>
                     </div>
                     <h1>Consentement accordé avec succès !</h1>
-                    <p class="message">Le consentement administrateur a été accordé pour cette application. L'application peut maintenant accéder aux ressources autorisées de votre organisation.</p>
+                    <p class="message">Le consentement administrateur a été accordé pour cette application.</p>
                     <div class="details">
                         <div class="detail-row">
                             <span class="detail-label">Statut :</span>
@@ -285,15 +396,16 @@
                         <a href="https://portal.azure.com" class="btn btn-primary">Retour au portail Azure</a>
                         <button onclick="window.close()" class="btn btn-secondary">Fermer</button>
                     </div>
+                    ${disclaimer}
                     <div class="footer">
                         COCD - Azure App Registration
                     </div>
                 `;
-            } 
-            // Aucun paramètre détecté (accès direct à la page)
+            }
+            // Accès direct
             else {
                 content.innerHTML = `
-                    <div class="icon loading">
+                    <div class="icon info">
                         <span>ℹ</span>
                     </div>
                     <h1>Page de redirection Azure AD</h1>
@@ -304,13 +416,14 @@
                             <span class="detail-value">Admin Consent Redirect URI</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">URL actuelle :</span>
+                            <span class="detail-label">URL :</span>
                             <span class="detail-value">${window.location.href}</span>
                         </div>
                     </div>
                     <div class="actions">
                         <a href="https://portal.azure.com" class="btn btn-primary">Aller au portail Azure</a>
                     </div>
+                    ${disclaimer}
                     <div class="footer">
                         COCD - Azure App Registration
                     </div>
@@ -318,7 +431,7 @@
             }
         }
 
-        // Exécuter au chargement de la page
+        // Charger au démarrage
         window.addEventListener('DOMContentLoaded', displayResult);
     </script>
 </body>
