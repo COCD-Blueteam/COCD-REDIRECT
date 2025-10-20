@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Admin Consent - COCD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 40px;
+        }
+
+        .icon.success {
+            background: #d4edda;
+            color: #28a745;
+        }
+
+        .icon.error {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+
+        .icon.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 28px;
+        }
+
+        .message {
+            text-align: center;
+            color: #666;
+            margin-bottom: 32px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            flex-shrink: 0;
+            margin-right: 16px;
+        }
+
+        .detail-value {
+            color: #6c757d;
+            text-align: right;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e9ecef;
+            color: #adb5bd;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="content">
+            <div class="icon loading">
+                <span>⏳</span>
+            </div>
+            <h1>Traitement en cours...</h1>
+            <p class="message">Analyse de la réponse d'Azure AD...</p>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour extraire les paramètres de l'URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                tenant: params.get('tenant'),
+                adminConsent: params.get('admin_consent'),
+                state: params.get('state'),
+                error: params.get('error'),
+                errorDescription: params.get('error_description')
+            };
+        }
+
+        // Fonction pour afficher le résultat
+        function displayResult() {
+            const params = getUrlParams();
+            const content = document.getElementById('content');
+            
+            // Vérifier s'il y a une erreur
+            if (params.error) {
+                content.innerHTML = `
+                    <div class="icon error">
+                        <span>✗</span>
+                    </div>
+                    <h1>Consentement refusé ou échoué</h1>
+                    <p class="message">Le consentement administrateur n'a pas pu être accordé. Veuillez réessayer ou contacter votre administrateur.</p>
+                    <div class="details">
+                        <div class="detail-row">
+                            <span class="detail-label">Erreur :</span>
+                            <span class="detail-value">${params.error}</span>
+                        </div>
+                        ${params.errorDescription ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Description :</span>
+                            <span class="detail-value">${decodeURIComponent(params.errorDescription)}</span>
+                        </div>
+                        ` : ''}
+                        ${params.tenant ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Tenant ID :</span>
+                            <span class="detail-value">${params.tenant}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="actions">
+                        <a href="https://portal.azure.com" class="btn btn-primary">Retour au portail Azure</a>
+                        <button onclick="window.close()" class="btn btn-secondary">Fermer</button>
+                    </div>
+                    <div class="footer">
+                        COCD - Azure App Registration
+                    </div>
+                `;
+            } 
+            // Vérifier si le consentement a été accordé
+            else if (params.adminConsent === 'True') {
+                content.innerHTML = `
+                    <div class="icon success">
+                        <span>✓</span>
+                    </div>
+                    <h1>Consentement accordé avec succès !</h1>
+                    <p class="message">Le consentement administrateur a été accordé pour cette application. L'application peut maintenant accéder aux ressources autorisées de votre organisation.</p>
+                    <div class="details">
+                        <div class="detail-row">
+                            <span class="detail-label">Statut :</span>
+                            <span class="detail-value">✓ Approuvé</span>
+                        </div>
+                        ${params.tenant ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Tenant ID :</span>
+                            <span class="detail-value">${params.tenant}</span>
+                        </div>
+                        ` : ''}
+                        ${params.state ? `
+                        <div class="detail-row">
+                            <span class="detail-label">State :</span>
+                            <span class="detail-value">${params.state}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span class="detail-label">Date/Heure :</span>
+                            <span class="detail-value">${new Date().toLocaleString('fr-FR')}</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <a href="https://portal.azure.com" class="btn btn-primary">Retour au portail Azure</a>
+                        <button onclick="window.close()" class="btn btn-secondary">Fermer</button>
+                    </div>
+                    <div class="footer">
+                        COCD - Azure App Registration
+                    </div>
+                `;
+            } 
+            // Aucun paramètre détecté (accès direct à la page)
+            else {
+                content.innerHTML = `
+                    <div class="icon loading">
+                        <span>ℹ</span>
+                    </div>
+                    <h1>Page de redirection Azure AD</h1>
+                    <p class="message">Cette page sert de point de redirection pour le consentement administrateur des applications Azure AD.</p>
+                    <div class="details">
+                        <div class="detail-row">
+                            <span class="detail-label">Type :</span>
+                            <span class="detail-value">Admin Consent Redirect URI</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">URL actuelle :</span>
+                            <span class="detail-value">${window.location.href}</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <a href="https://portal.azure.com" class="btn btn-primary">Aller au portail Azure</a>
+                    </div>
+                    <div class="footer">
+                        COCD - Azure App Registration
+                    </div>
+                `;
+            }
+        }
+
+        // Exécuter au chargement de la page
+        window.addEventListener('DOMContentLoaded', displayResult);
+    </script>
+</body>
+</html>
+
